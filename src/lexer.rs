@@ -131,7 +131,7 @@ pub enum C1Token {
     #[regex(r"[ \t\f]+", logos::skip)]
     Whitespace,
 
-    #[regex(r"[\n]")]
+    #[regex(r"(\r\n|\r|\n)")]
     Linebreak,
 
     // Logos requires one token variant to handle errors,
