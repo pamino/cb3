@@ -53,7 +53,6 @@ impl<'a> C1Parser<'a> {
 
     // statementlist::= ( block )*
     fn statement_list(&mut self) -> ParseResult {
-        println!("statement_list");
         while !self.current_matches(&C1Token::RightBrace) && (self.current_token() != None) {
             self.block()?;
         }
@@ -62,8 +61,6 @@ impl<'a> C1Parser<'a> {
 
     // block::= "{" statementlist "}" | statement
     fn block(&mut self) -> ParseResult {
-        println!("block");
-        self.dbg_current(None);
         if self.current_matches(&C1Token::LeftBrace) {
             self.eat();
             self.statement_list()?;
@@ -77,9 +74,6 @@ impl<'a> C1Parser<'a> {
 
     // statement::= ifstatement | returnstatement ";" | printf ";" | statassignment ";" | functioncall ";"
     fn statement(&mut self) -> ParseResult {
-        println!("statement");
-        self.dbg_current(None);
-        self.dbg_next(None);
         match self.current_token() {
             Some(C1Token::KwIf) => self.if_statement(),
             Some(C1Token::KwReturn) => {self.return_statement()?; self.check_and_eat_token(&C1Token::Semicolon)},
@@ -143,8 +137,6 @@ impl<'a> C1Parser<'a> {
 
     // assignment::= ( ( <ID> "=" assignment ) | expr )
     fn assignment(&mut self) -> ParseResult {
-        self.dbg_current(None);
-        self.dbg_next(None);
         if self.current_matches(&C1Token::Identifier) && self.next_matches(&C1Token::Assign) {
             self.eat();
             self.eat();
@@ -210,7 +202,7 @@ impl<'a> C1Parser<'a> {
                 self.check_and_eat_token(&C1Token::RightParenthesis)?;
                 Ok(())
             }
-            _ => Err(("").to_string()),
+            _ => Err(self.error_message_current("matching error in token")),
         }?;
 
         Ok(())
@@ -224,13 +216,7 @@ impl<'a> C1Parser<'a> {
             self.eat();
             Ok(())
         } else {
-            if self.current_token().is_some() {
-                println!("Error: is: {:?} | expected:{:?}", self.current_token().unwrap(), token);
-            }
-            else {
-                println!("Error: is: empty | expected: {:?}", token);
-            }
-            Err(String::from(""))
+            Err(self.error_message_current("Couldn't eat"))
         }
     }
 
@@ -278,51 +264,7 @@ impl<'a> C1Parser<'a> {
         {
             Ok(())
         } else {
-            if self.current_token().is_some() {
-                println!("Error: is: {:?} | expected:{:?}", self.current_token().unwrap(), token);
-            }
-            else {
-                println!("Error: is: empty | expected: {:?}", token);
-            }
-            Err(String::from(""))
-        }
-    }
-
-    fn dbg_current(&self, token: Option<&C1Token>) {
-        if token.is_some() {
-            if self.current_token().is_some() {
-                println!("is: {:?} | expected:{:?}", self.current_token().unwrap(), token.unwrap());
-            }
-            else {
-                println!("is: empty | expected: {:?}", token.unwrap());
-            }
-        }
-        else {
-            if self.current_token().is_some() {
-                println!("is: {:?} | expected:?", self.current_token().unwrap());
-            }
-            else {
-                println!("is: empty | expected: ?");
-            }
-        }
-    }
-
-    fn dbg_next(&self, token: Option<&C1Token>) {
-        if token.is_some() {
-            if self.current_token().is_some() {
-                println!("is next: {:?} | expected:{:?}", self.peek_token().unwrap(), token.unwrap());
-            }
-            else {
-                println!("is next: empty | expected: {:?}", token.unwrap());
-            }
-        }
-        else {
-            if self.peek_token().is_some() {
-                println!("is next: {:?} | expected:?", self.peek_token().unwrap());
-            }
-            else {
-                println!("is next: empty | expected: ?");
-            }
+            Err(self.error_message_current("Couldn't match"))
         }
     }
 
@@ -337,20 +279,7 @@ impl<'a> C1Parser<'a> {
             ),
         }
     }
-
-    fn error_message_peek(&mut self, reason: &'static str) -> String {
-        match self.peek_token() {
-            None => format!("{}. Reached EOF", reason),
-            Some(_) => format!(
-                "{} at line {:?} with text: '{}'",
-                reason,
-                self.peek_line_number().unwrap(),
-                self.peek_text().unwrap()
-            ),
-        }
-    }
 }
-
 #[cfg(test)]
 mod tests {
     use crate::parser::{C1Parser, ParseResult};
@@ -481,7 +410,6 @@ mod tests {
         }"
         )
         .is_ok());
-        println!("\n\n\n{{x = 4;}}y = 1;foo;{{}}\n");
         assert!(call_method(C1Parser::statement_list, "{x = 4;}\ny = 1;\n{}").is_ok());
     }
 
